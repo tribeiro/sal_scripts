@@ -5,6 +5,7 @@ import argparse
 import logging
 import pandas as pd
 import sqlite3
+import time
 import datetime
 
 import SALPY_MTPtg
@@ -23,8 +24,8 @@ buffer gets larger than a certain amount the simulation will be terminated as th
 be guaranteed.
 """
 
-logging.getLogger().setLevel(logging.INFO)
-logging.basicConfig(level=logging.INFO,
+logging.getLogger().setLevel(logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG,
                 format='[%(asctime)s] [%(name)-12s:%(lineno)-4d] [%(levelname)-8s]: %(message)s',
                 datefmt='%m-%d %H:%M:%S')
 
@@ -82,6 +83,8 @@ def main(args):
         ra = df['fieldRA'][i]
         dec = df['fieldDec'][i]
         observation_lst = df['observationStartLST'][i]
+        slewtime = df['slewTime'][i]
+        exptime = df['visitExposureTime'][i]
 
         ha = observation_lst - ra  # compute hour angle of the observation
 
@@ -91,7 +94,16 @@ def main(args):
 
         current_ra = current_lst - ha
 
-        logging.debug('Target[%i]: %8.2f %8.2f', i+1, current_ra, dec)
+        log.debug('Target[%i]: %8.2f %8.2f', i+1, current_ra, dec)
+
+        # Send target
+        log.debug('Slewing...')
+        time.sleep(slewtime)
+
+        log.debug('Exposing...')
+        time.sleep(exptime)
+
+        log.debug('Done')
 
     # at the end, disable pt kernel if requested
     if args.enable:
