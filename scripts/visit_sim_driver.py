@@ -97,10 +97,10 @@ def main(args):
         log.debug('Target[%i]: %8.2f %8.2f', i+1, current_ra, dec)
 
         # Send target
-        log.debug('Slewing...')
+        log.debug('Slewing (%.2f s)...', slewtime)
         time.sleep(slewtime)
 
-        log.debug('Exposing...')
+        log.debug('Exposing (%.2f s)...', exptime)
         time.sleep(exptime)
 
         log.debug('Done')
