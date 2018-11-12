@@ -49,7 +49,7 @@ def create_parser():
                         help="Maximum buffer size before finalizing the simulation (in seconds).")
     parser.add_argument('--time-zone', dest='time_zone', default=-2., type=float,
                         help="Time zone difference to compute Local Sidereal Time (hours).")
-    parser.add_argument('--timeout', dest='timeout', default=5., type=float,
+    parser.add_argument('--timeout', dest='timeout', default=5, type=int,
                         help="Command timeout (in seconds).")
     parser.add_argument("--database", dest="database", default=None, type=str,
                         help="Filename with the run database.")
