@@ -119,8 +119,8 @@ def main(args):
 
         myData.targetName = 'target_%04i' % (i+1)
         myData.targetInstance = i+1
-        myData.ra = current_ra
-        myData.declination = dec
+        myData.ra = float(current_ra)
+        myData.declination = float(dec)
 
         cmdId = mgr.issueCommand_raDecTarget(myData)
 
