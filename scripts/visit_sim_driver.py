@@ -78,23 +78,23 @@ def main(args):
         return -1
 
     # preparing topic to publish
-    myData = SALPY_MTPtg.MTPtg_command_raDecTargetC()
-    myData.frame = 1
-    myData.epoch = 2000.
-    myData.equinox = 2000.
+    target_data = SALPY_MTPtg.MTPtg_command_raDecTargetC()
+    target_data.frame = 1
+    target_data.epoch = 2000.
+    target_data.equinox = 2000.
 
-    myData.parallax = 0.
-    myData.pmRA = 0.
-    myData.pmDec = 0.
-    myData.rv = 0.
-    myData.dRA = 0.
-    myData.dDec = 0.
-    myData.rotPA = 0.
-    myData.rotFrame = 1
-    myData.rotMode = 1
+    target_data.parallax = 0.
+    target_data.pmRA = 0.
+    target_data.pmDec = 0.
+    target_data.rv = 0.
+    target_data.dRA = 0.
+    target_data.dDec = 0.
+    target_data.rotPA = 0.
+    target_data.rotFrame = 1
+    target_data.rotMode = 1
 
     # topic for time and date from the pointing kernel
-    myData = SALPY_MTPtg.MTPtg_timeAndDateC()
+    time_data = SALPY_MTPtg.MTPtg_timeAndDateC()
 
     log.debug('Reading input data from %s', args.database)
 
@@ -115,26 +115,26 @@ def main(args):
 
         # now, I need to get the local sidereal time
         # now = datetime.datetime.now()
-        retval = mgr.getNextSample_timeAndDate(myData)
+        retval = mgr.getNextSample_timeAndDate(time_data)
 
         # Read everything in the buffer...
         while retval < 0:
-            retval = mgr.getNextSample_timeAndDate(myData)
+            retval = mgr.getNextSample_timeAndDate(time_data)
 
-        log.debug('Current LST: %s', myData.lst)
-        hour, minute, second = myData.lst.split(':')
+        log.debug('Current LST: %s', time_data.lst)
+        hour, minute, second = time_data.lst.split(':')
         current_lst = (float(hour) + float(minute)/60. + float(second)/60./60.)
 
         current_ra = current_lst - ha * 24. / 360.   # in hours
 
         log.debug('Target[%i]: %8.2f %8.2f', i+1, current_ra, dec)
 
-        myData.targetName = 'target_%04i' % (i+1)
-        myData.targetInstance = i+1
-        myData.ra = '%f' % current_ra
-        myData.declination = '%f' % dec
+        target_data.targetName = 'target_%04i' % (i+1)
+        target_data.targetInstance = i+1
+        target_data.ra = '%f' % current_ra
+        target_data.declination = '%f' % dec
 
-        cmdId = mgr.issueCommand_raDecTarget(myData)
+        cmdId = mgr.issueCommand_raDecTarget(target_data)
 
         before_cmd_time = time.time()
         retval = mgr.waitForCompletion_raDecTarget(cmdId, args.timeout)
