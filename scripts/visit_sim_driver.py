@@ -111,9 +111,9 @@ def main(args):
 
         # now, I need to get the local sidereal time
         now = datetime.datetime.now()
-        current_lst = (now.hour + now.minute/60. + now.second/60./60.) * 360. / 24.
+        current_lst = (now.hour + now.minute/60. + now.second/60./60.)
 
-        current_ra = current_lst - ha
+        current_ra = current_lst * 24. / 360. - ha  # in hours
 
         log.debug('Target[%i]: %8.2f %8.2f', i+1, current_ra, dec)
 
