@@ -62,6 +62,7 @@ def main(args):
     log = logging.getLogger(__name__)
     mgr = SALPY_MTPtg.SAL_MTPtg()
     mgr.salCommand("MTPtg_command_raDecTarget")
+    mgr.salTelemetrySub("MTPtg_timeAndDate")
 
     # If pt kernel needs enabling, enable it
     if args.enable:
@@ -76,7 +77,7 @@ def main(args):
         log.error('File %s does not exists. Specify valid database with --database option.', args.database)
         return -1
 
-    # preparing topic
+    # preparing topic to publish
     myData = SALPY_MTPtg.MTPtg_command_raDecTargetC()
     myData.frame = 1
     myData.epoch = 2000.
@@ -91,6 +92,9 @@ def main(args):
     myData.rotPA = 0.
     myData.rotFrame = 1
     myData.rotMode = 1
+
+    # topic for time and date from the pointing kernel
+    myData = SALPY_MTPtg.MTPtg_timeAndDateC()
 
     log.debug('Reading input data from %s', args.database)
 
@@ -110,10 +114,18 @@ def main(args):
         ha = observation_lst - ra  # compute hour angle of the observation
 
         # now, I need to get the local sidereal time
-        now = datetime.datetime.now()
-        current_lst = (now.hour + now.minute/60. + now.second/60./60.)
+        # now = datetime.datetime.now()
+        retval = mgr.getNextSample_timeAndDate(myData)
 
-        current_ra = current_lst * 24. / 360. - ha - args.time_zone  # in hours
+        # Read everything in the buffer...
+        while retval < 0:
+            retval = mgr.getNextSample_timeAndDate(myData)
+
+        log.debug('Current LST: %s', myData.lst)
+        hour, minute, second = myData.lst.split(':')
+        current_lst = (float(hour) + float(minute)/60. + float(second)/60./60.)
+
+        current_ra = current_lst - ha * 24. / 360.   # in hours
 
         log.debug('Target[%i]: %8.2f %8.2f', i+1, current_ra, dec)
 
