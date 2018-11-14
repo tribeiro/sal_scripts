@@ -61,13 +61,38 @@ def main(args):
 
     log = logging.getLogger(__name__)
     mgr = SALPY_MTPtg.SAL_MTPtg()
+    mgr.salCommand("MTPtg_command_start")
+    mgr.salCommand("MTPtg_command_enable")
+    mgr.salCommand("MTPtg_command_disable")
+    mgr.salCommand("MTPtg_command_standby")
     mgr.salCommand("MTPtg_command_raDecTarget")
     mgr.salTelemetrySub("MTPtg_timeAndDate")
 
+    def disable():
+        log.debug('Disabling PT Kernel...')
+        disable = SALPY_MTPtg.MTPtg_command_disableC()
+        cmdId = mgr.issueCommand_disable(disable)
+        retval = mgr.waitForCompletion_disable(cmdId, args.timeout)
+        if retval < 0:
+            log.warning("Could not Disable PT Kernel. Continuing...")
+        return retval
+
     # If pt kernel needs enabling, enable it
     if args.enable:
+        log.debug('Starting PT Kernel...')
+        start = SALPY_MTPtg.MTPtg_command_startC()
+        cmdId = mgr.issueCommand_start(start)
+        retval = mgr.waitForCompletion_start(cmdId, args.timeout)
+        if retval < 0:
+            raise IOError("Could not start MTPtg.")
+
         log.debug('Enabling PT Kernel...')
-        pass
+        enable = SALPY_MTPtg.MTPtg_command_enableC()
+        cmdId = mgr.issueCommand_enable(enable)
+        retval = mgr.waitForCompletion_enable(cmdId, args.timeout)
+        if retval < 0:
+            raise IOError("Could not enable MTPtg.")
+
     else:
         log.debug('Pointing kernel will not be enabled...')
 
@@ -104,58 +129,74 @@ def main(args):
     log.debug('Got %i targets from database. Starting simulation', len(df))
 
     buffer = 0.
-    for i in range(len(df)):
-        ra = df['fieldRA'][i]
-        dec = df['fieldDec'][i]
-        observation_lst = df['observationStartLST'][i]
-        slewtime = df['slewTime'][i]
-        exptime = df['visitExposureTime'][i]
+    try:
+        for i in range(len(df)):
+            ra = df['fieldRA'][i]
+            dec = df['fieldDec'][i]
+            observation_lst = df['observationStartLST'][i]
+            slewtime = df['slewTime'][i]
+            exptime = df['visitExposureTime'][i]
 
-        ha = observation_lst - ra  # compute hour angle of the observation
+            ha = observation_lst - ra  # compute hour angle of the observation
 
-        # now, I need to get the local sidereal time
-        # now = datetime.datetime.now()
-        retval = mgr.getNextSample_timeAndDate(time_data)
-
-        # Read everything in the buffer...
-        while retval < 0:
+            # now, I need to get the local sidereal time
+            # now = datetime.datetime.now()
             retval = mgr.getNextSample_timeAndDate(time_data)
 
-        log.debug('Current LST: %s', time_data.lst)
-        hour, minute, second = time_data.lst.split(':')
-        current_lst = (float(hour) + float(minute)/60. + float(second)/60./60.)
+            # Read everything in the buffer...
+            while retval < 0:
+                retval = mgr.getNextSample_timeAndDate(time_data)
 
-        current_ra = current_lst - ha * 24. / 360.   # in hours
+            log.debug('Current LST: %s', time_data.lst)
+            hour, minute, second = time_data.lst.split(':')
+            current_lst = (float(hour) + float(minute)/60. + float(second)/60./60.)
 
-        log.debug('Target[%i]: %8.2f %8.2f', i+1, current_ra, dec)
+            current_ra = current_lst - ha * 24. / 360.   # in hours
 
-        target_data.targetName = 'target_%04i' % (i+1)
-        target_data.targetInstance = i+1
-        target_data.ra = '%f' % current_ra
-        target_data.declination = '%f' % dec
+            log.debug('Target[%i]: %8.2f %8.2f', i+1, current_ra, dec)
 
-        cmdId = mgr.issueCommand_raDecTarget(target_data)
+            target_data.targetName = 'target_%04i' % (i+1)
+            target_data.targetInstance = i+1
+            target_data.ra = '%f' % current_ra
+            target_data.declination = '%f' % dec
 
-        before_cmd_time = time.time()
-        retval = mgr.waitForCompletion_raDecTarget(cmdId, args.timeout)
-        cmd_time = time.time()-before_cmd_time
+            cmdId = mgr.issueCommand_raDecTarget(target_data)
 
-        log.debug('Command took %f s', cmd_time)
+            before_cmd_time = time.time()
+            retval = mgr.waitForCompletion_raDecTarget(cmdId, args.timeout)
 
-        # Send target
-        log.debug('Slewing (%.2f s)...', slewtime)
-        # TODO: loop to get signal from Mount
-        time.sleep(slewtime)
+            if retval < 0:
+                raise IOError('Command %i not ok...' % cmdId)
 
-        log.debug('Exposing (%.2f s)...', exptime)
-        time.sleep(exptime)
+            cmd_time = time.time()-before_cmd_time
 
-        log.debug('Done')
+            log.debug('Command took %f s', cmd_time)
+
+            # Send target
+            log.debug('Slewing (%.2f s)...', slewtime)
+            # TODO: loop to get signal from Mount
+            time.sleep(slewtime)
+
+            log.debug('Exposing (%.2f s)...', exptime)
+            time.sleep(exptime)
+
+            log.debug('Done')
+    except Exception as e:
+        disable()
+        raise e
 
     # at the end, disable pt kernel if requested
-    if args.enable:
-        log.debug('Disabling PT Kernel...')
-        pass
+    if args.disable:
+
+        disable()
+
+        log.debug('Standing by PT Kernel...')
+        standby = SALPY_MTPtg.MTPtg_command_standbyC()
+        cmdId = mgr.issueCommand_standby(standby)
+        retval = mgr.waitForCompletion_standby(cmdId, args.timeout)
+        if retval < 0:
+            log.warning("Could not put PT Kernel in standby")
+
     else:
         log.debug('Pointing kernel will not be disable...')
 
