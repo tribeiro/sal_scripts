@@ -201,7 +201,12 @@ def main(args):
             time.sleep(exptime)
 
             log.debug('Done')
-    except Exception:
+    except (KeyboardInterrupt, SystemExit):
+        log.warning('Keyboard interrupt!')
+        disable()
+        standby()
+        return -1
+    except:
         t, v, tb = sys.exc_info()
         disable()
         standby()
