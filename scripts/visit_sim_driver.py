@@ -47,6 +47,8 @@ def create_parser():
                         help="Disable pointing kernel.")
     parser.add_argument('--max-buffer', dest='max_buffer', default=60., type=float,
                         help="Maximum buffer size before finalizing the simulation (in seconds).")
+    parser.add_argument('-n', '--nobs', dest='nobs', default=None, type=int,
+                        help="Number of observations to simulate. Default is all.")
     parser.add_argument('--time-zone', dest='time_zone', default=-2., type=float,
                         help="Time zone difference to compute Local Sidereal Time (hours).")
     parser.add_argument('--timeout', dest='timeout', default=5, type=int,
@@ -76,6 +78,14 @@ def main(args):
         if retval < 0:
             log.warning("Could not Disable PT Kernel. Continuing...")
         return retval
+
+    def standby():
+        log.debug('Standing by PT Kernel...')
+        standby = SALPY_MTPtg.MTPtg_command_standbyC()
+        cmdId = mgr.issueCommand_standby(standby)
+        retval = mgr.waitForCompletion_standby(cmdId, args.timeout)
+        if retval < 0:
+            log.warning("Could not put PT Kernel in standby")
 
     # If pt kernel needs enabling, enable it
     if args.enable:
@@ -128,9 +138,16 @@ def main(args):
 
     log.debug('Got %i targets from database. Starting simulation', len(df))
 
+    log.debug('Wait for time and Date.')
+
     buffer = 0.
     try:
-        for i in range(len(df)):
+        retval = mgr.getNextSample_timeAndDate(time_data, args.timeout)
+        if retval < 0:
+            raise IOError("No time and date published by MTPtg")
+
+        nobs = len(df) if (args.nobs is None or (0 < args.nobs < len(df))) else args.nobs
+        for i in range(nobs):
             ra = df['fieldRA'][i]
             dec = df['fieldDec'][i]
             observation_lst = df['observationStartLST'][i]
@@ -184,6 +201,7 @@ def main(args):
     except Exception:
         t, v, tb = sys.exc_info()
         disable()
+        standby()
         raise t, v, tb
 
     # at the end, disable pt kernel if requested
@@ -191,12 +209,7 @@ def main(args):
 
         disable()
 
-        log.debug('Standing by PT Kernel...')
-        standby = SALPY_MTPtg.MTPtg_command_standbyC()
-        cmdId = mgr.issueCommand_standby(standby)
-        retval = mgr.waitForCompletion_standby(cmdId, args.timeout)
-        if retval < 0:
-            log.warning("Could not put PT Kernel in standby")
+        standby()
 
     else:
         log.debug('Pointing kernel will not be disable...')
