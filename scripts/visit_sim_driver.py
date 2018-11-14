@@ -149,7 +149,7 @@ def main(args):
             if (time.time() - time_start) > args.timeout:
                 raise IOError('Can not get time and date from MTPtg.')
 
-        nobs = len(df) if (args.nobs is None or (0 < args.nobs < len(df))) else args.nobs
+        nobs = len(df) if (args.nobs is None or not (0 < args.nobs < len(df))) else args.nobs
         for i in range(nobs):
             ra = df['fieldRA'][i]
             dec = df['fieldDec'][i]
