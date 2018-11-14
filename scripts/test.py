@@ -4,7 +4,7 @@ __all__ = ["MyTestScript"]
 import asyncio
 
 import salobj
-from ts_scriptqueue.base_script import BaseScript
+from lsst.ts.scriptqueue.base_script import BaseScript
 import SALPY_Test
 
 
