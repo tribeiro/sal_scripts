@@ -142,9 +142,12 @@ def main(args):
 
     buffer = 0.
     try:
-        retval = mgr.getNextSample_timeAndDate(time_data, args.timeout)
-        if retval < 0:
-            raise IOError("No time and date published by MTPtg")
+        retval = mgr.getNextSample_timeAndDate(time_data)
+        time_start = time.time()
+        while retval < 0:
+            retval = mgr.getNextSample_timeAndDate(time_data)
+            if (time.time() - time_start) > args.timeout:
+                raise IOError('Can not get time and date from MTPtg.')
 
         nobs = len(df) if (args.nobs is None or (0 < args.nobs < len(df))) else args.nobs
         for i in range(nobs):
