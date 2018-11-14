@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os
+import os, sys
 import argparse
 import logging
 import pandas as pd
@@ -181,9 +181,10 @@ def main(args):
             time.sleep(exptime)
 
             log.debug('Done')
-    except Exception as e:
+    except Exception:
+        t, v, tb = sys.exc_info()
         disable()
-        raise e
+        raise t, v, tb
 
     # at the end, disable pt kernel if requested
     if args.disable:
